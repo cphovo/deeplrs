@@ -22,6 +22,8 @@ async fn main() {
         target = &args[3];
     }
 
-    let r = deepl::req(text, source, target).await.unwrap();
-    println!("{}", r.result.texts[0].alternatives[0].text);
+    match deepl::req(text, source, target).await {
+        Ok(r) => println!("{}", r.result.texts[0].alternatives[0].text),
+        Err(err) => println!("{}", err),
+    }
 }

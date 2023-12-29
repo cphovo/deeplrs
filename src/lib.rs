@@ -2,7 +2,9 @@ use std::{io::Read, time::UNIX_EPOCH};
 
 use brotli::Decompressor;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 const DEEPL_URL: &str = "https://www2.deepl.com/jsonrpc";
 
@@ -56,10 +58,14 @@ pub async fn req(
         .send()
         .await?;
 
-    let encoding_header = response.headers().get("Content-Encoding").cloned();
+    if response.status() == StatusCode::TOO_MANY_REQUESTS {
+        return Err("Too Many Requests".into());
+    }
+
+    let content_encoding = response.headers().get("Content-Encoding").cloned();
     let bytes = response.bytes().await?;
 
-    let data = match encoding_header {
+    let data = match content_encoding {
         Some(br) if br == "br" => {
             // parsing brotli-formatted data
             decompress_brotli(&bytes)?
@@ -67,7 +73,14 @@ pub async fn req(
         _ => String::from_utf8(bytes.to_vec()).expect("Found invalid UTF-8"),
     };
 
-    let json_obj = serde_json::from_str(&data).expect("JSON was not well-formatted");
+    let r: Value = serde_json::from_str(&data).unwrap();
+    if let Some(error_code) = r["error"]["code"].as_i64() {
+        if error_code == -32600 {
+            return Err("Invalid Target language".into());
+        }
+    }
+
+    let json_obj: JsonResponse = serde_json::from_str(&data).expect("JSON was not well-formatted");
 
     Ok(json_obj)
 }
