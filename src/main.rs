@@ -1,5 +1,7 @@
 use std::env;
 
+use whatlang::{detect, Lang};
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,6 +14,15 @@ async fn main() {
     let text = &args[1];
     let mut source = "zh";
     let mut target = "en";
+    if args.len() == 2 {
+        let lang_info = detect(text).unwrap();
+        // 如果检测语言不是普通话，且为指定语言
+        // 一律视为英文翻译为中文
+        if lang_info.lang() != Lang::Cmn {
+            source = "en";
+            target = "zh";
+        }
+    }
 
     if args.len() == 3 {
         source = &args[2];
