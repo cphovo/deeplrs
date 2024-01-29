@@ -26,7 +26,6 @@ async fn main() {
             source = "en";
             target = "zh";
         }
-        println!("{:?}", lang_info);
     }
 
     if args.len() == 3 {
